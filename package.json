@@ -12,6 +12,9 @@
   "dependencies": {
     "babel-core": "^6.26.3",
     "bootstrap": "^4.1.3",
+    "fs-extra": "^7.0.0",
+    "ipfs": "^0.32.3",
+    "ipfs-api": "^24.0.2",
     "react": "^16.5.2",
     "react-dom": "^16.5.2",
     "truffle-contract": "^3.0.6",

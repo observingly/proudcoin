@@ -6,5 +6,10 @@ module.exports = {
       port: 8545,
       network_id: "*"
     }
+    testnet: {
+      //host:,
+      port: 8545,
+      network_id: "*"
+    }
   }
 };

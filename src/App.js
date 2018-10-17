@@ -1,7 +1,6 @@
 import React from 'react'
-import TodosContract from '../build/contracts/Todos.json'
 import CoinContract from '../build/contracts/Coin.json'
-import ItemsContract from '../build/contracts/Items.json'
+import StoreContract from '../build/contracts/Store.json'
 import getWeb3 from './helpers'
 import contract from 'truffle-contract'
 import './index.scss'
@@ -9,38 +8,28 @@ import './index.scss'
 class App extends React.Component {
   constructor(props) {
     super(props);
+    
 
     this.state = {
-      textarea: '',
       web3: null,
-      todos: [],
-      todosContract: null,
       coinContract: null,
-      items: [],
-      itemsContract: null,
+      storeContract: null,
+      textarea: '',
       name: '',
+      code: '',
       description: '',
       price: '',
-      stock: ''
+      stock: '',
+      items: []
     }
-  
-    this.renderItems = this.renderItems.bind(this);
-    this.renderTodos = this.renderTodos.bind(this);
-    this.instantiateContracts = this.instantiateContracts.bind(this);
-    this.fetchTodos = this.fetchTodos.bind(this);
-    // this.handleChange = this.handleChange.bind(this);
-    // this.handleSubmit = this.handleSubmit.bind(this);
+
+    this.instantiateContracts = this.instantiateContracts.bind(this)
+    this.fetchItems = this.fetchItems.bind(this)
+    this.renderItems = this.renderItems.bind(this)
+    this.handleChange = this.handleChange.bind(this)
+    this.addItem = this.addItem.bind(this)
+    this.addTomato = this.addTomato.bind(this)
   }
-
-  // handleSubmit (event) {
-  //   event.preventDefault()
-  //   this.setState({})
-  // }
-
-  // handleBuy (event) {
-  //   event.preventDefault()
-  //   this.setState({})
-  // }
 
   componentWillMount() {
     getWeb3.then(results => {
@@ -48,107 +37,87 @@ class App extends React.Component {
         web3: results.web3
       })
       this.instantiateContracts().then(() => {
-        this.fetchTodos()
         this.fetchItems()
       })
-    });
+    })
   }
 
-  handleTextAreaChange(event) {
-    this.setState({
-      textarea: event.target.value
-    });
+  instantiateContracts () {
+    const web3 = this.state.web3
+    const coin = contract(CoinContract)
+    const store = contract(StoreContract)
+
+    coin.setProvider(this.state.web3.currentProvider)
+    store.setProvider(this.state.web3.currentProvider)
+
+    return coin.deployed().then(coinContract => {
+      this.setState({
+        coinContract
+      })
+      return store.deployed().then(storeContract => {
+        this.setState({
+          storeContract
+        })
+      })
+    })
   }
 
-  renderTodos(todos) {
-    return todos.map((todo, i) => {
-      return (
-        <li key={i}>{todo}</li>
-      );
+  fetchItems () {
+    const web3 = this.state.web3
+    const storeContract = this.state.storeContract
+    storeContract.getItems([]).then(items => {
+      this.setState({
+        items: items.map(item => item)
+      })
     })
   }
 
   renderItems(items) {
     return items.map((item, i) => {
       return (
-        <li key={i}>{item}</li>
-      );
+        <div key={i}>
+          <p>{item.name}</p>
+          <p>{item.code}</p>
+          <p>{item.description}</p>
+          <p>{item.price}</p>
+          <p>{item.stock}</p>
+        </div>
+      )
     })
   }
 
-  instantiateContracts() {
-    const web3 = this.state.web3;
-    const todos = contract(TodosContract);
-    const coin = contract(CoinContract);
-    const items = contract(ItemsContract);
-    
-    todos.setProvider(this.state.web3.currentProvider);
-    coin.setProvider(this.state.web3.currentProvider);
-    items.setProvider(this.state.web3.currentProvider);
-    
-    return todos.deployed().then(todosContract => {
-      this.setState({
-        todosContract
+  handleChange(event) {
+    this.setState({
+      [event.target.name]: event.target.value
+    })
+  }
+
+  addItem(event) {
+    event.preventDefault()
+    const web3 = this.state.web3
+    const storeContract = this.state.storeContract
+    storeContract.addItem(web3.fromAscii(this.state.name), (this.state.code),
+      (this.state.description), (this.state.price), (this.state.stock), {
+        from: web3.eth.accounts[0]
       })
-    })
-
-    return coin.deployed().then(coinContract => {
-      this.setState({
-        coinContract
-      })
-    })
-
-    return items.deployed().then(itemsContract => {
-      this.setState({
-        itemsContract
-      })
-    })
+    const item = { name: this.state.name,
+      code: this.state.code,
+      description: this.state.description,
+      price: this.state.price,
+      stock: this.state.stock
+    }
+    this.setState({ items: [...this.state.items, item] })
   }
 
-  fetchTodos() {
-    const web3 = this.state.web3;
-    const todosContract = this.state.todosContract;
-    todosContract.getTodos().then(todos => {
-      this.setState({
-        todos: todos.map(todo => web3.toAscii(todo))
-      })
-    })
+  buyItem(event) {
+    event.preventDefault()
+    const web3 = this.state.web3
+    const storeContract = this.state.storeContract
+    // storeContract.buyItem(web3.fromAscii(), {
+    //   from: web3.eth.accounts[0]
+    // })
   }
 
-  fetchItems() {
-    const web3 = this.state.web3;
-    const itemsContract = this.state.itemsContract;
-    itemsContract.getItems().then(items => {
-      this.setState({
-        items: items.map(item => web3.toAscii(item))
-      })
-    })
-  }
-
-  addTodo() {
-    const web3 = this.state.web3;
-    const todosContract = this.state.todosContract;
-    todosContract.addTodo(web3.fromAscii(this.state.textarea), {
-      from: web3.eth.accounts[0]
-    })
-  }
-
-  addItem() {
-    const web3 = this.state.web3;
-    const itemsContract = this.state.ItemsContract;
-    itemsContract.addItem(web3.fromAscii(this.state.name, this.state.description, this.state.price, this.state.stock), {
-      from: web3.eth.accounts[0]
-    })
-  }
-
-  buyItem() {
-    const web3 = this.state.web3;
-    const itemsContract = this.state.ItemsContract;
-    itemsContract.buyItem(web3.fromAscii(), {
-      from: web3.eth.accounts[0]
-    })
-  }
-  
   render() {
     if (!this.state.web3) {
       return (
@@ -157,40 +126,74 @@ class App extends React.Component {
     }
     return (
       <div className="app">
-        <header>
-          <nav>
-            <a href="#"> ProudCoin App</a>
-          </nav>
-        </header>
         <main>
           <h1>Store</h1>
-          <form onSubmit={this.handleSubmit}>
-            <label>Name</label>
-            <input type="text" name="name" value={this.state.name} required onChange={this.handleChange} /> 
-            <label>Description</label>
-            <textarea name="description" value={this.state.description} onChange={this.handleChange} />
-            <label>Price</label>
-            <input type="text" name="price" value={this.state.price} required onChange={this.handleChange} />
-            <label>Stock</label>
-            <input type="number" name="stock" value={this.state.stock} required onChange={this.handleChange} />
-            <button onClick={this.addItem.bind(this)}>Add Item</button>
-          </form>
-          <ul>
-            {this.renderItems(this.state.items)}
-          </ul>
-      {/**<textarea id="textarea" value={this.state.textarea} onChange={this.handleTextAreaChange.bind(this)} />
-          <button onClick={this.addTodo.bind(this)}>Add Todo</button>
-          <ul>
-            {this.renderTodos(this.state.todos)}
-          </ul>**/}
+          <div className="container item-container">
+            <div className="col-sm item-card">
+              <img src={require("../assets/images/pengin.png")} className="rounded item-image" />
+              <h5 className="item-name">Pengin</h5>
+              <button type="button" className="btn btn-light item-btn">Buy</button>
+            </div>
+            <div className="col-sm item-card">
+              <img src={require("../assets/images/shirokuma.png")} className="rounded item-image" />
+              <h5 className="item-name">Shirokuma</h5>
+              <button type="button" className="btn btn-light item-btn">Buy</button>
+            </div>
+            <div className="col-sm item-card">
+              <img src={require("../assets/images/tonkatsu.png")} className="rounded item-image" />
+              <h5 className="item-name">Tonkatsu</h5>
+              <button type="button" className="btn btn-light item-btn">Buy</button>
+            </div>
+            <div className="col-sm item-card">
+              <img src={require("../assets/images/neko.png")} className="rounded item-image" />
+              <h5 className="item-name">Neko</h5>
+              <button type="button" className="btn btn-light item-btn">Buy</button>
+            </div>
+            <div className="col-sm item-card">
+              <img src={require("../assets/images/tokage.png")} className="rounded item-image" />
+              <h5 className="item-name">Tokage</h5>
+              <button type="button" className="btn btn-light item-btn">Buy</button>
+            </div>
+            <div className="col-sm item-card">
+            </div>
+          </div>
         </main>
+        <form onSubmit={e => this.addItem(e)}>
+          <div className="form-group">
+            <label>Name</label>
+            <input type="text" name="name" className="form-control" required onChange={this.handleChange} />
+          </div>
+          <div className="form-group">
+            <label>Code</label>
+            <input type="text" name="code" className="form-control" required onChange={this.handleChange} />
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <input type="text" name="description" className="form-control" required onChange={this.handleChange} />
+          </div>
+          <div className="form-group">
+            <label>Price</label>
+            <input type="text" name="price" className="form-control" required onChange={this.handleChange} />
+          </div>
+          <div className="form-group">
+            <label>Stock</label>
+            <input type="text" name="stock" className="form-control" required onChange={this.handleChange} />
+          </div>
+          <div className="form-group">
+            <input type="file" name="image" className="form-control-file" onChange={this.handleChange} />
+          </div>
+          <button type="submit" className="btn btn-primary">Add Item</button>
+        </form>
+        <ul>
+          {this.renderItems(this.state.items)}
+        </ul>
         <footer>
           <a href="https://metamask.io/" rel="noopener noreferrer" target="_blank">
             <img src={require("../assets/images/metamask.png")} alt="" className="metamask" />
           </a>
         </footer>
       </div>
-    );
+    )
   }
 }
 
